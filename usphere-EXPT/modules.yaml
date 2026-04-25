@@ -1,0 +1,49 @@
+# usphere-EXPT module registry
+#
+# Each entry defines one running module process.
+# ExptClient reads this file and connects to whichever modules are online.
+#
+# Fields:
+#   rep_port   — ZMQ REP socket (synchronous commands / queries)
+#   pub_port   — ZMQ PUB socket (async live-data stream)
+#   path       — submodule directory relative to repo root
+#   entry      — server script to launch (python <entry>)
+#   label      — human-readable name shown in the unified GUI
+#   host       — hostname (default: localhost)
+#   timeout_ms — REP receive timeout in ms (default: 2000)
+#
+# Port allocation:
+#   ctrl       5550 / 5551
+#   daq        5552 / 5553
+#   q          5554 / 5555
+#   (future)   5556 / 5557  ...
+
+modules:
+  ctrl:
+    rep_port:   5550
+    pub_port:   5551
+    path:       usphere-CTRL
+    entry:      ctrl_server.py
+    label:      "FPGA & Hardware Control"
+
+  daq:
+    rep_port:   5552
+    pub_port:   5553
+    path:       usphere-DAQ
+    entry:      daq_server.py
+    label:      "Data Acquisition"
+
+  q:
+    rep_port:   5554
+    pub_port:   5555
+    path:       usphere-Q
+    entry:      q_server.py
+    label:      "Charge Control"
+
+  # Template for a new module — uncomment and fill in:
+  # slowctrl:
+  #   rep_port:   5556
+  #   pub_port:   5557
+  #   path:       usphere-SLOWCTRL
+  #   entry:      slowctrl_server.py
+  #   label:      "Slow Control / Database"

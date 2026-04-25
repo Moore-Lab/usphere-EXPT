@@ -1,0 +1,9 @@
+[submodule "usphere-Q"]
+	path = usphere-Q
+	url = https://github.com/Moore-Lab/usphere-Q
+[submodule "usphere-CTRL"]
+	path = usphere-CTRL
+	url = https://github.com/Moore-Lab/usphere-CTRL
+[submodule "usphere-DAQ"]
+	path = usphere-DAQ
+	url = https://github.com/Moore-Lab/usphere-DAQ
