@@ -52,8 +52,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-_HERE = Path(__file__).parent
-_ROOT = _HERE.parent   # repo root — all submodule paths are relative to this
+_HERE = Path(__file__).parent   # repo root — submodule paths are relative to this
+_ROOT = _HERE
 
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
@@ -255,6 +255,21 @@ class ExptWindow(QMainWindow):
             except Exception as exc:
                 log.error("Failed to load module %r: %s", name, exc)
             self._descriptors.append(desc)
+        self._wire_cross_module()
+
+    def _wire_cross_module(self) -> None:
+        """Wire interactions between modules after all have been loaded."""
+        by_name = {d.name: d for d in self._descriptors if d.online}
+
+        ctrl = by_name.get("ctrl")
+        daq  = by_name.get("daq")
+
+        # DAQ subscribes to CTRL PUB so FPGA registers and TIC pressure are
+        # automatically injected into every H5 file without experiment scripts
+        # needing to call inject_ctrl_state() explicitly.
+        if ctrl is not None and daq is not None and daq.server is not None:
+            daq.server.start_ctrl_sub(host="localhost", port=ctrl.pub_port)
+            log.info("DAQ auto-injection: subscribed to CTRL PUB port %d", ctrl.pub_port)
 
     # ------------------------------------------------------------------
     # UI construction
