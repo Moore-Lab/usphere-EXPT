@@ -99,7 +99,7 @@ def _add_submodule_path(desc: ModuleDescriptor) -> None:
 
 def _load_ctrl(desc: ModuleDescriptor) -> None:
     _add_submodule_path(desc)
-    from fpga_core import FPGAController
+    from fpga.core import FPGAController
     from ctrl_server import CtrlServer
     from fpga_gui import FPGAWidget
 
@@ -136,11 +136,7 @@ def _load_q(desc: ModuleDescriptor) -> None:
 
     server = QServer(rep_port=desc.rep_port, pub_port=desc.pub_port)
     server.start()
-    widget = ChargeWidget(
-        controller=server._controller,
-        flashlamp=server._flashlamp,
-        filament=server._filament,
-    )
+    widget = ChargeWidget()
 
     desc.server = server
     desc.widget = widget
