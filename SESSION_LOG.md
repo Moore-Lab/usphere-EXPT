@@ -16,6 +16,29 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-14 — SR530 update: real submodule, API adaptation, sync fix
+**Focus:** Pull the rewritten SR530 driver (protocol fixes + CLI, SR530_controller
+`27cc1b3`) into usphere-Q and make everything that consumes it work.
+**Changes:** In usphere-Q (`86433fa`, pushed): converted `resources/SR530_controller`
+from accidentally-vendored files into a real submodule pinned to `27cc1b3`; removed
+orphan gitlinks `resources/usphere-DAQ` / `resources/usphere-FPGA` (empty stubs that
+made `git submodule status` fatal); adapted `charge_analysis.py` to the new
+`snapshot()` keys (`x/y/r` now volts, `x_v/y_v/r_v` gone) and `charge_gui.py` to the
+retired AdvancedTab (its absence silently disabled the whole Lock-In tab); preserved
+the vendored-only user guide as `docs/SR530_USER_GUIDE.md`. In usphere-EXPT
+(`68b432d`): `sync_submodules.py` now enumerates from `.gitmodules` (immune to
+orphan gitlinks) and warns on index/.gitmodules mismatches. Ran
+`sync_submodules.py --commit --push` — pointer commits pushed at all levels
+(root `7ba1de3`).
+**State / handoff:** New driver defaults: 19200 baud, no parity, 2 stop bits,
+COM11, `W 0` fast readback — the physical SR530 DIP switches must match. Two
+pre-existing issues surfaced by the sync, not fixed: (1)
+`usphere-DAQ/analysis/Inertial-Sensing` `.gitmodules` lists `coriolis` but its files
+are vendored (same trap as SR530 had); (2)
+`.../Inertial-Sensing/microsphere_utility_scripts` has local commits diverged from
+origin/main — needs a manual rebase/merge decision. usphere-CTRL still has
+untracked in-flight content from another session — untouched.
+
 ## 2026-07-14 — Session log + CLAUDE.md for parallel-session coordination
 **Focus:** Full repo read-through, then set up coordination files so parallel
 Claude sessions keep the repo and each other up to date.
