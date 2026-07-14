@@ -14,6 +14,10 @@ Usage
     python sync_submodules.py --force-reset     # use `reset --hard origin/<branch>`
                                                 # instead of `pull --ff-only` (destructive)
 
+Submodules are enumerated from each repo's .gitmodules (not `git submodule
+status`, which fails outright if the index holds an unmapped gitlink).
+Mismatches between .gitmodules and the index are reported as warnings.
+
 What it does for each submodule (recursively, depth-first per submodule)
 ------------------------------------------------------------------------
 1. Skip if not initialised (directory empty) - prints a hint to init it.
@@ -70,17 +74,53 @@ def _run(cmd: list[str], cwd: Path, capture: bool = True) -> subprocess.Complete
 
 
 def _submodule_paths(path: Path) -> list[str]:
-    """Return submodule paths (relative to *path*) from `git submodule status`."""
-    r = _run(["git", "submodule", "status"], path)
+    """Return submodule paths (relative to *path*) from .gitmodules.
+
+    .gitmodules is used as the authoritative list rather than
+    `git submodule status`, because that command dies wholesale when the
+    index contains a gitlink with no .gitmodules mapping (an orphaned
+    gitlink), which would silently disable recursion below *path*.
+
+    Entries whose path is not a gitlink in the index (e.g. a submodule
+    whose files were accidentally committed directly, so a pull can never
+    update it) are reported and skipped.  Orphaned gitlinks are reported
+    too, since `git submodule` remains broken in that repo until fixed.
+    """
+    if not (path / ".gitmodules").exists():
+        _warn_orphan_gitlinks(path, mapped=set())
+        return []
+    r = _run(["git", "config", "-f", ".gitmodules",
+              "--get-regexp", r"^submodule\..*\.path$"], path)
     paths = []
     for line in r.stdout.splitlines():
-        line = line.strip()
-        if not line:
+        parts = line.strip().split(None, 1)
+        if len(parts) != 2:
             continue
-        parts = line.split()
-        if len(parts) >= 2:
-            paths.append(parts[1])
+        rel = parts[1]
+        ls = _run(["git", "ls-files", "-s", "--", rel], path)
+        mode = ls.stdout.split(None, 1)[0] if ls.stdout.strip() else ""
+        if mode != "160000":
+            print(f"  [WARN] {path.name}: .gitmodules lists {rel!r} but it is "
+                  f"not a gitlink in the index (vendored files or stale "
+                  f"entry) - skipping; it cannot be synced until converted "
+                  f"to a real submodule.")
+            continue
+        paths.append(rel)
+    _warn_orphan_gitlinks(path, mapped=set(paths))
     return paths
+
+
+def _warn_orphan_gitlinks(path: Path, mapped: set[str]) -> None:
+    """Report index gitlinks that have no .gitmodules mapping."""
+    r = _run(["git", "ls-files", "-s"], path)
+    for line in r.stdout.splitlines():
+        if not line.startswith("160000"):
+            continue
+        rel = line.split("\t", 1)[-1].strip()
+        if rel not in mapped:
+            print(f"  [WARN] {path.name}: gitlink {rel!r} has no .gitmodules "
+                  f"entry - `git submodule` is broken in this repo until it "
+                  f"is mapped or removed (git rm --cached {rel}).")
 
 
 def _current_branch(path: Path) -> str | None:
