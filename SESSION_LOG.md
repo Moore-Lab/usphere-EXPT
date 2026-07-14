@@ -16,6 +16,26 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-14 — Drive setback while charging + lock-in reference findings
+**Focus:** Reduce the electrode drive automatically while the filament charges
+the sphere, restore it after, without corrupting the charge readout.
+**Changes:** usphere-Q `9c92a44` (pushed): `DriveSetbackAdapter` in
+wg_control_tab wraps the filament actuator (reduce drive → filament on;
+filament off → restore); lock-in sources gained `set_drive_scale()` so
+charge = X/(vpe·scale) stays correct while reduced (reported as
+`drive_amp_scale`); ControlTab "Drive setback while charging" group
+(checkbox + charging Vpp, persisted); wired in charge_gui (ChargeController
+and PhotonOrderExperiment get the wrapped filament). Root pointer updated.
+**State / handoff:** Hardware findings recorded here for the lab: the
+AFG-2225 rear "Trigger output" is a **sweep/burst marker only** (manual p.16,
+p.130) — it cannot serve as a per-cycle lock-in reference in continuous mode;
+use a dedicated AFG channel at fixed amplitude into SR530 REF IN (sine
+trigger wants ≥100 mVpp symmetric, ~1 Vrms recommended; edge modes want
+TTL-level pulses). Reference and drive channels must be set to the same
+frequency; `sync_phases()` exists in the AFG driver. The uncommitted
+`checkQ_calibration.json` edit in Microsphere-Utility-Scripts is still
+pending an owner.
+
 ## 2026-07-14 — One-button auto lock-in calibration (usphere-Q)
 **Focus:** Replace the type-in-a-voltage lock-in calibration with a button that
 samples the live lock-in and computes V/e itself.
