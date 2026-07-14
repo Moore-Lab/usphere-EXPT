@@ -16,6 +16,27 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-14 — One-button auto lock-in calibration (usphere-Q)
+**Focus:** Replace the type-in-a-voltage lock-in calibration with a button that
+samples the live lock-in and computes V/e itself.
+**Changes:** usphere-Q `0c943af` (pushed): CalibrationTab gained an
+"auto" group — known |charge| + polarity + Start button; samples `raw_voltage`
+from the AnalysisTab stream (SR530-direct or ESP32 source), Welford mean/SEM,
+stops at target SEM (default 1%, ≥100 samples) or max samples (default 10 000);
+saves V/e with SR530 sensitivity/phase metadata; refuses to save on
+polarity/voltage sign mismatch; result auto-fills the Analysis tab V/e field and
+updates the running source (`AnalysisTab.set_volts_per_electron`,
+`lockin_cal_saved` signal wired in charge_gui). Manual workflow kept. Verified
+with a headless synthetic-sample test (convergence, persistence, sign guard,
+cancel, config round-trip). Root pointer updated via sync script.
+**State / handoff:** `resources/Microsphere-Utility-Scripts` (inside usphere-Q)
+has an UNCOMMITTED edit to the reference `checkQ_calibration.json` — a fresh
+file-based recalibration (f≈99.945 Hz, 65536 samples) from the lab / a parallel
+session. Left untouched; needs an owner to commit or move to a local cal file
+per the per-sphere policy. The diverged
+`Inertial-Sensing/microsphere_utility_scripts` from the previous entry is still
+pending.
+
 ## 2026-07-14 — SR530 update: real submodule, API adaptation, sync fix
 **Focus:** Pull the rewritten SR530 driver (protocol fixes + CLI, SR530_controller
 `27cc1b3`) into usphere-Q and make everything that consumes it work.
