@@ -16,6 +16,18 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-15 — Lock-in reference now mirrors the drive's output on/off
+**Focus:** Extend the reference mirror to the output state (per user request).
+**Changes:** usphere-Q `46ce53a` (pushed), parent pointer synced. New
+`_on_output_changed` hook on ChannelControlWidget → `notify_drive_output` on
+LockInReferenceGroup: drive OFF → reference OFF; drive ON → sync + reference ON
+(only when the toggled channel is the mirrored one). Drive-setback is
+unaffected (it changes amplitude, never toggles output — reference stays on at
+fixed amplitude while charging). Live-verified on WG1/COM4 through the real
+drive-tab buttons.
+**State / handoff:** No new caveats. Same as the prior entry: reference (WG1-CH2)
+has no ADC; ref+mirror must be the two channels of one AFG.
+
 ## 2026-07-15 — Self-mirroring lock-in reference in the channel map
 **Focus:** Make the lock-in reference (WG1-CH2 → SR530 REF IN) a user-assignable,
 self-mirroring output so it can be repointed without recoding.
