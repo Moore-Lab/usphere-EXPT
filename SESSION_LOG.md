@@ -16,6 +16,32 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-15 — NGE100 power supply integration + hardware rewiring
+**Focus:** Adapt usphere-Q to the reorganized charge hardware (7 outputs across
+3 AFG-2225 WGs + an R&S NGE103B DC supply) and integrate the power supply into
+the control/GUI.
+**Changes:** usphere-Q `90d8152` (pushed), parent pointer synced. Vendored
+`resources/NGE100_controller` as a submodule; added `nge_supply.py` (root
+wrapper, mirrors wg_flashlamp.py). New GUI: NGE connection panel (defaults
+COM3), `NGEChannelMap` (flash control→CH1, filament power→CH2), `NGEControlGroup`
+(V/I setpoints, Apply/On/Off, threaded readback). Flash-lamp control moved from
+an AFG DC channel to the NGE; filament trigger moved WG2-CH2→WG3-CH2 and gained
+an NGE power group; electrode-map defaults updated. Verified the full
+**physical map against the DAQ** (empirical AFG-ch→ADC probe):
+WG01=COM4 (Y=AI19 / lock-in ref), WG02=COM6 (X=AI18 / Z=AI20),
+WG03=COM10 (flash trig=AI22 / filament trig=AI21), NGE=COM3 (flash ctrl=AI23 1:1
+/ filament power=CH2 no-ADC). Live end-to-end: NGE voltage set via widget/adapter
+lands on AI23; filament power confirmed by NGE readback. Left all instruments
+off + local.
+**State / handoff:** DAQ is on **PXI1Slot3** (a PXIe-6363), not Slot2 (that's the
+FPGA). NGE auto-discover is timing-flaky — connect-by-port (COM3) is reliable.
+The lock-in **reference** (WG1-CH2, fixed amplitude → SR530 REF IN) is wired but
+its control/setup UI is deferred to the next phase (lock-in charge measurement +
+calibration), which the user wants to start next. Filament power (NGE CH2) has no
+ADC — verify via NGE readback only; don't fire flash/filament triggers while
+setting control levels. The uncommitted `checkQ_calibration.json` in
+Microsphere-Utility-Scripts (usphere-Q) is still pending an owner — untouched.
+
 ## 2026-07-14 — Drive setback while charging + lock-in reference findings
 **Focus:** Reduce the electrode drive automatically while the filament charges
 the sphere, restore it after, without corrupting the charge readout.
