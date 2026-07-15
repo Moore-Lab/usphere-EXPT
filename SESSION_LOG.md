@@ -16,6 +16,27 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-15 — Self-mirroring lock-in reference in the channel map
+**Focus:** Make the lock-in reference (WG1-CH2 → SR530 REF IN) a user-assignable,
+self-mirroring output so it can be repointed without recoding.
+**Changes:** usphere-Q `e7472a6` (pushed), parent pointer synced.
+`LockInReferenceGroup` in the Channel Map tab: assign reference WG/CH + the drive
+WG/CH it mirrors (mirror auto-fills to opposite CH same WG, validated; names the
+drive from the electrode map). One knob = reference amplitude (fixed, so the
+SR530 keeps lock while the drive amplitude varies). True mirror: reads the
+mirrored channel's live waveform (type + freq + duty/width/symmetry), reproduces
+it on the reference at the reference amplitude, phase-locks via AFG
+`sync_phases`; re-mirrors automatically when the drive is applied (new
+`_on_applied` hook on ChannelControlWidget); ARB/comb warns to set manually.
+Persisted as `LockInRef`. Live-verified on WG1/COM4 (square & sine mirrored at
+fixed amplitude, independent of drive amplitude, auto-remirror).
+**State / handoff:** The reference output (WG1-CH2) is not on an ADC, so it's
+verified by AFG config readback, not the DAQ. Reference and mirror MUST be the
+two channels of one AFG (phase-lock requirement) — enforced in the UI. Changing
+the reference amplitude needs a Sync/Output-ON click (waveform follows the drive
+automatically; amplitude is the deliberate manual knob). Lock-in charge
+measurement + calibration is the next phase and can now use this reference.
+
 ## 2026-07-15 — NGE100 power supply integration + hardware rewiring
 **Focus:** Adapt usphere-Q to the reorganized charge hardware (7 outputs across
 3 AFG-2225 WGs + an R&S NGE103B DC supply) and integrate the power supply into
