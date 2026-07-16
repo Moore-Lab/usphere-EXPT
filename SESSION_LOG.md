@@ -16,6 +16,21 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-16 — Sequencer 'Set electrode field' command
+**Focus:** Let the sequencer raise/lower the drive field between steps (measure
+high-SNR, recharge at low field so the filament doesn't eject the sphere).
+**Changes:** usphere-Q `591d5c7` (pushed), parent synced. New `set_electrode`
+SeqStep action (amplitude + settle); ChargeSequencer emits
+`set_electrode_requested(amp)`; charge_gui applies it on the GUI thread (sets the
+monitored-axis drive spinbox = source of truth, re-applies to program the AFG +
+re-mirror the reference, pushes the amplitude to the charge normalization). UI
+adds the action page; 'Wait' relabeled 'Wait (delay)'. Headless-verified.
+**State / handoff:** Set-electrode targets the MONITORED axis drive (no axis
+picker yet — easy to add). Uses the drive spinbox as the single source of truth
+so it stays consistent with effective_amplitude()/normalization. Still awaiting
+live commissioning on a real sphere. (User's request message was truncated at
+"So I would" — implemented the clear ask; may have had more to specify.)
+
 ## 2026-07-16 — Compound charge-control command sequencer (Phase 2)
 **Focus:** List-based charge/discharge cycle sequencer in the Experiment tab.
 **Changes:** usphere-Q `fc7f85d` (pushed), parent synced. New `charge_sequence.py`
