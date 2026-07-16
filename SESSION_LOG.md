@@ -16,6 +16,26 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-16 — Filament ramp (gentle heating caught at the threshold)
+**Focus:** Filament runs away (same settings gave ~100 charges before, ~10000
+now; threshold drifts daily). Ramp gently so the loop catches the onset.
+**Changes:** usphere-Q `8a4c4d8` (pushed), parent synced. `FilamentRamp`
+(charge_control): mode off|freq|width — ramp trigger frequency (fixed width) or
+pulse width (fixed freq) from start by increment up to a maximum; step_interval_s
+throttles the advance (0 = every poll), charge still checked every poll.
+ChargeController `set_filament_ramp()` + `_execute_heat_ramp` (runs every poll,
+advances, keeps the filament pulsing via new `FilamentAdapter.set_pulse` which
+keeps the drive-setback park engaged; at-target now actively stops + resets the
+ramp; ramp steps skip the max-consecutive safety; holds at max if unreachable).
+Reusable `FilamentRampConfig` editor: Control tab (in-loop, applied on Start +
+"Apply ramp") and Filament tab `FilamentRampWidget` (manual out-of-loop runner).
+Configs persist. Headless-verified.
+**State / handoff:** SSR min pulse ~5 ms — set fixed/start widths ≥5 ms. Ramp
+rate = increment × poll rate (or throttled by step interval); tune increment
+small so the onset is caught before runaway. At-target stop is the catch; if the
+target is never reached the ramp holds at max and pulses until you Stop (no
+auto-timeout yet — possible follow-up). NOT yet run on a real sphere.
+
 ## 2026-07-16 — Analysis SR530 source reuses the Lock-In tab connection
 **Focus:** Remove the double-connect confusion when calibrating the lock-in.
 **Changes:** usphere-Q `dcd6853` (pushed), parent synced. The Analysis "Lock-in
