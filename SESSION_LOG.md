@@ -16,6 +16,27 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-16 — Compound charge-control command sequencer (Phase 2)
+**Focus:** List-based charge/discharge cycle sequencer in the Experiment tab.
+**Changes:** usphere-Q `fc7f85d` (pushed), parent synced. New `charge_sequence.py`
+(SeqStep + threaded ChargeSequencer engine: each step = discharge/recharge/wait
+with a signed charge-threshold stop condition |q|≤/≥ or q≤/≥, per-step timeout,
+global safety charge-limit ceiling; list repeats N times, 0=until stopped);
+`ChargeSequencerActuators` in wg_control_tab (resolves AFG/NGE handles on the GUI
+thread in prepare(), programs controllers directly from the worker thread —
+thread-safe); `sequencer_tab.py` (step editor + add/reorder/remove list + repeat
+/limit/poll + Start/Stop + log). Wired in charge_gui as the "Command Sequence"
+sub-tab of a new Experiment tab-group; charge feed + config persist. Headless-
+validated (mock actuator + simulated charge): multi-cycle discharge/recharge hits
+thresholds, timeout/safety-limit/Stop all work, config round-trips.
+**State / handoff:** NOT yet run on a real sphere — live commissioning is next.
+Per-step actuator amplitudes (trigger pulse Vhigh, NGE current limits) are taken
+from the Electrodes/Filament tab widgets at Start, so set those up first; the
+sequencer sets rate/freq/width/ctrl-level/power per step. Stop condition uses the
+Phase-1 quantized live charge. Note: signed comparisons (q≤/q≥) are overshoot-safe
+(monotonic); |q| band conditions rely on the poll observing the crossing (fine at
+0.2 s poll vs slow real charge).
+
 ## 2026-07-16 — Live lock-in charge normalized by drive amplitude (always quanta)
 **Focus:** Make the live lock-in readout report the same charge regardless of
 drive amplitude (Phase 1 of the charge-diagnostics work).
