@@ -16,6 +16,25 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-16 — Analysis SR530 source reuses the Lock-In tab connection
+**Focus:** Remove the double-connect confusion when calibrating the lock-in.
+**Changes:** usphere-Q `dcd6853` (pushed), parent synced. The Analysis "Lock-in
+(SR530 direct)" source used to open its OWN SR530Controller on the same COM port
+as the Lock-In tab — impossible (serial ports are exclusive), and confusingly
+redundant. Now: SR530Tab exposes `controller()`; AnalysisTab gained
+`set_sr530_provider()` and `_on_start` prefers the shared controller;
+`_SR530PollThread`/`SR530SerialSource` accept a `controller=` to poll snapshot()
+without connect/disconnect (never closes a connection it doesn't own); charge_gui
+wires the provider. The Analysis "SR530 serial port" field is now a fallback only
+(blank = use Lock-In tab), with an in-UI note. Headless-verified.
+**State / handoff:** Calibration workflow now: connect SR530 once in the Lock-In
+tab (set phase so Y≈0, pick sensitivity) → Analysis: pick "Lock-in (SR530
+direct)", set volts-per-electron (or leave for the Calibration tab's auto-cal to
+fill) + optional cal drive amp → run → Calibration tab auto-cal at a known charge.
+Poll rate = Analysis read cadence (distinct from the Lock-In Monitor's display
+poll). If both the Lock-In Monitor and the Analysis source poll at once they
+serialize on the controller's RLock (works, just shares bandwidth).
+
 ## 2026-07-16 — Control tab: arm NGE DC outputs for the session
 **Focus:** Make the Control tab a turnkey automatic charge/discharge tester.
 **Changes:** usphere-Q `f7e6b87` (pushed), parent synced. The ChargeController
