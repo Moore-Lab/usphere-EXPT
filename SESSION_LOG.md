@@ -16,6 +16,26 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-16 — Control tab: arm NGE DC outputs for the session
+**Focus:** Make the Control tab a turnkey automatic charge/discharge tester.
+**Changes:** usphere-Q `f7e6b87` (pushed), parent synced. The ChargeController
+already consumed the calibrated/normalized charge (`charge_updated`), but only
+gated the flash/filament triggers — the NGE DC levels had to be enabled by hand.
+Now `ChargeController.start()` arms both actuators (NGE flash-control +
+filament-power outputs ON at their setpoints) and `stop()` disarms (session
+on/off, DC steady, triggers gate actuation). Added `FlashLampAdapter.arm/disarm`,
+a new `FilamentAdapter` (filament trigger + NGE power), and `DriveSetbackAdapter`
+pass-through; charge_gui wraps the filament in FilamentAdapter. getattr-guarded
+so mocks/None/photon-experiment are unaffected. Headless-verified.
+**State / handoff:** Operator still sets the flash-control voltage + filament
+power *levels* in the Flash Lamp / Filament tabs (and flash rate / filament
+freq-width); the Control tab turns those outputs on for the session and does the
+threshold logic (target ± tolerance or a rule = "turn off after crossing"). The
+Photon Order experiment has the same NGE-gating gap (out of scope here) — it
+drives flash only for reset, so no regression. Control tab and Experiment tab
+share the charge input but use different actuator engines (bang-bang vs step
+sequencer) — this is intended.
+
 ## 2026-07-16 — Sequencer 'Set electrode field' command
 **Focus:** Let the sequencer raise/lower the drive field between steps (measure
 high-SNR, recharge at low field so the filament doesn't eject the sphere).
