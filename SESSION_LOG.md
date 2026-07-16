@@ -16,6 +16,29 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-16 — Live lock-in charge normalized by drive amplitude (always quanta)
+**Focus:** Make the live lock-in readout report the same charge regardless of
+drive amplitude (Phase 1 of the charge-diagnostics work).
+**Changes:** usphere-Q `0b8156e` (pushed), parent synced. Physics verified
+(X = C·q·A_drive ⇒ X/A_drive ∝ q) via a 3-agent workflow against the code +
+checkQ. Implemented: lock-in calibration now records `drive_amplitude_vpp`
+(charge_calibration); CalibrationTab captures the drive amplitude at cal time
+and `lockin_cal_saved` carries (vpe, drive_amp, kind); AnalysisTab has a
+"Cal drive amp (Vpp)" field per source and computes `charge = X/(vpe·drive_scale)`
+with `drive_scale = current_drive/cal_drive` on every reading (0 cal ⇒ off,
+backward compatible), plus a live normalization label; DriveSetbackAdapter now
+reports the ABSOLUTE drive amplitude and exposes `effective_amplitude()`;
+charge_gui pushes the live drive amplitude on the 2 s timer + immediately during
+setback. Headless-verified charge constant to 1e-6 over a 100× drive range.
+**State / handoff:** Uses the COMMANDED drive amplitude (2×-accuracy live
+diagnostics, as the user intends — offline checkQ is the precision path).
+Measured-drive demodulation from AI18–20 is a documented future refinement.
+Amplitude normalization does NOT remove susceptibility/resonance drift — still
+needs periodic recalibration for absolute charge. NEXT (Phase 2, user-requested):
+compound charge-control command sequencer in the Experiment tab (list-based
+charge/discharge cycles with per-step tweaks), modeled on the Electrodes Sweep
+tab.
+
 ## 2026-07-15 — Lock-in reference now mirrors the drive's output on/off
 **Focus:** Extend the reference mirror to the output state (per user request).
 **Changes:** usphere-Q `46ce53a` (pushed), parent pointer synced. New
