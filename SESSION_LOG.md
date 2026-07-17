@@ -16,6 +16,20 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-16 — Lock-in calibration accepts a signed V/e (negative is valid)
+**Focus:** Fix a spurious "polarity/phase opposite sign" error when calibrating.
+**Changes:** usphere-Q `67a621d` (pushed), parent synced. The lock-in X sign vs
+charge polarity is set by the arbitrary SR530 phase, so a positive charge can
+give a negative X → a valid NEGATIVE volts-per-electron. Bug: sources treated
+`vpe>0` as the calibrated condition (negative silently fell back to raw voltage),
+and the auto-cal rejected opposite-sign results. Fix: `calibrated = vpe!=0 and
+|vpe|!=1.0` (1.0 stays the uncalibrated sentinel); `charge = X/(vpe*scale)` is
+already correct for signed vpe; polarity now follows the computed charge's sign;
+removed the auto-cal sign-mismatch guard; tooltips note the signed value.
+Headless-verified (new test_signed_vpe).
+**State / handoff:** No caveats. A negative V/e in the Analysis field is expected
+and correct — it just records which way the SR530 phase was set.
+
 ## 2026-07-16 — Filament ramp (gentle heating caught at the threshold)
 **Focus:** Filament runs away (same settings gave ~100 charges before, ~10000
 now; threshold drifts daily). Ramp gently so the loop catches the onset.
