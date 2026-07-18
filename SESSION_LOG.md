@@ -16,6 +16,30 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-18 — Control tab redesign: flash/filament/target, direction-based
+**Focus:** The Control tab was hard to use. Strip it to basic flash/filament
+usage + a target/tolerance auto-control, all synced to the SR530 read cycle.
+**Changes:** usphere-Q `ea4417b` (pushed), parent pointer updated (hand-staged
+usphere-Q only; siblings hold other sessions' work). ChargeController rewritten
+direction-based with a policy (auto|flash|filament): flash raises + (continuous,
+evaluated each read), filament lowers − (pulse-wait-read ramp), auto picks by
+direction to a target ± tolerance; relative "change by Δ" targets; safety
+timeout (default 10 min) enforced by an independent QTimer watchdog; cancel();
+`stopped` signal; per-tool Δq diagnostics (RampCycle.device). Drive setback now
+applies to BOTH tools via a shared object (set_drive_setback) and gained
+fire_pulse/pulse_off/park/restore (also fixes the pulse ramp under the
+setback-wrapped filament — a latent bug from the prior commit). ControlTab
+rebuilt (Flash/Filament/Target panels, gray status, shared Cancel, cycle logs);
+rules/lists/old timing removed. q_server.py/q_cli.py: dropped removed
+set_timing/add_rule/clear_rules, added set_policy/set_timeout/set_flash_params.
+Ran a 4-dimension adversarial review workflow (parallel agents); its 3 confirmed
+findings (timeout watchdog, filament overshoot false-success, q_server
+regression) are all fixed. Headless-verified: 12/12 suite green.
+**State / handoff:** Still needs the same bench check as the prior commit — the
+1 mHz single-pulse firing assumes the AFG restarts the pulse at phase 0 on
+output-on. Bang-bang flash/filament in auto can oscillate if the tolerance is
+narrower than one filament pulse's charge; widen tolerance or start-width.
+
 ## 2026-07-17 — Filament pulse-wait-read ramp (shared Control + sequencer core)
 **Focus:** The filament runs away and makes the lock-in noisy while on, so the
 old continuous freq/width ramp was hard to control. Replace it with a
