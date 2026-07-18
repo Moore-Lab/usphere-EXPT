@@ -16,6 +16,28 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-18 — Filament firing moved to a background thread (fix GUI freeze)
+**Focus:** The Control tab froze/crashed while ramping the filament.
+**Changes:** usphere-Q `d780512` (pushed), parent pointer updated (hand-staged
+usphere-Q only). Root cause: each pulse-wait-read step reprogrammed the whole
+AFG waveform on the GUI thread — `setup_pulse`'s apply is a *synced* serial
+write (~230 ms) + period/width + output toggles ≈ 0.6 s of blocking I/O per step
+inside `on_charge_update`, contended by the 2 s actuator-sync timer. The
+algorithm was fine; the firing was the problem (user confirmed pulse→wait→read
+is a hard constraint — a continuous train gives noisy reads). Fix: keep the
+algorithm, move firing off the GUI thread. New `_FilamentPulser` (QThread) owns
+the filament AFG serial I/O; `FilamentAdapter.fire_pulse/pulse_off` capture the
+handle on the GUI thread and enqueue (return in ~1 ms vs ~600 ms). Set the pulse
+up ONCE per channel, then per step change only the WIDTH (one cheap
+`SOUR:PULS:WIDT`, only when changed) + toggle output — no per-step reprogram.
+Pulser coalesces backlog; disable/off ordered through it (a queued fire can't
+re-enable after stop); `shutdown()` on GUI close. Manual FilamentRampWidget uses
+it too. Verified (test_filament_pulser); full suite 13/13.
+**State / handoff:** Firing logic unchanged — still 1 mHz carrier + output-on =
+one pulse; **bench-verify output-on restarts the pulse at phase 0**. Sequencer
+recharge already fires off the GUI thread (never froze) but still full-reprograms
+per pulse (slower, not a crash) — could adopt the same set_pulse_width later.
+
 ## 2026-07-18 — Control tab redesign: flash/filament/target, direction-based
 **Focus:** The Control tab was hard to use. Strip it to basic flash/filament
 usage + a target/tolerance auto-control, all synced to the SR530 read cycle.
