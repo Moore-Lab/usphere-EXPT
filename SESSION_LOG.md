@@ -16,6 +16,26 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-18 — Charge control safeties: overload stop + sign-independent |dq|
+**Focus:** The loop chased a bogus/overloaded reading (charge "read" +835,
+kept heating). Add safeties.
+**Changes:** usphere-Q `86f1ffb` (pushed), parent pointer hand-staged (usphere-Q
+only). (1) **Stop on lock-in overload**: an SR530 overload reading ends the loop
+("Lock-in OVERLOAD — stopped"), debounced by 2 reads. A "Stop on lock-in
+overload" tickbox in the Control tab, ON by default and persisted, gates it. An
+overloaded reading is invalid (wrong range while the drive is parked low → a
+pinned bogus charge), so acting on it runs away. (2) **Change-by is now
+sign-independent |dq|**: a manual flash/filament run stops when
+|charge - start| ≥ amount in EITHER direction — so asking to change by 10 and
+the charge jumping by ~800 (either sign) stops immediately. Replaces the signed
+relative-target with `set_change_by(amount, tool)` + a "change" mode; `set_target`
+keeps go-to-target±tol. Shared `_goal_met()`; mode-aware messages. Confirmed with
+the user: the filament makes the sphere MORE NEGATIVE (direction assumption
+unchanged). Verified (test_control_redesign 12/13; full suite 15/15).
+**State / handoff:** The overload debounce is 2 reads; if a wide filament pulse's
+transient overload trips it, raise the debounce (the pulse-off read is the one
+that matters). With auto-range on, overload should be rare in normal use.
+
 ## 2026-07-18 — Charge-Q: SR530 auto-range, start-charge-monitor, bounded ramp
 **Focus:** Auto-range the lock-in, a one-click "start charge monitor", bounded
 filament ramp, and more defaults.
