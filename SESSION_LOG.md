@@ -16,6 +16,30 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-18 — Charge-Q setup: connect-all, defaults, calibration load, flash off-thread
+**Focus:** Startup/UX batch for the charge GUI + move the flash lamp off the
+GUI thread like the filament.
+**Changes:** usphere-Q `79c1bc1` (pushed), parent pointer updated (hand-staged
+usphere-Q only). Connections tab: "Connect to all" button (WG1/2/3 + NGE, then
+via ChargeWidget the SR530 lock-in + a delayed reference sync). Defaults:
+x/y/z drive amp 8 Vpp, lock-in reference amp 8 Vpp, flash 200 Hz / 4 ms,
+flash-control NGE voltage 4 V (new NGEControlGroup `default_voltage_v`).
+Calibration: `make_lockin_cal` now records `known_charge`; new
+`most_recent_lockin_cal()`; the most recent lock-in cal auto-loads into
+Analysis (V/e + cal drive amp) when the SR530 connects; a dropdown + "Load
+calibration" button loads a chosen cal (V/e + cal drive amp → Analysis, known
+charge/polarity → charge inputs). Cal drive amp `drive_amplitude_vpp` was
+already in the schema/file (10µm sphere = 8 Vpp, in the vendored
+checkQ_calibration.json — not committed by me). Flash lamp off the GUI thread:
+`FlashLampAdapter` enable/disable run on a background `_AfgActionQueue` (like
+the filament pulser); `set_flash_rate` no longer does a blocking apply (enable
+applies). Verified headless (14/14 incl. new test_flash_pulser + cal auto-load).
+**State / handoff:** "Known charge in Analysis" — Analysis has no known-charge
+field, so a loaded cal's known charge goes to the Calibration charge inputs;
+V/e + cal drive amp go to Analysis. Reference "sync on connection" is a
+best-effort delayed sync (WG connects are async); the drive-apply/output
+auto-mirror is the real path and already worked.
+
 ## 2026-07-18 — Filament firing moved to a background thread (fix GUI freeze)
 **Focus:** The Control tab froze/crashed while ramping the filament.
 **Changes:** usphere-Q `d780512` (pushed), parent pointer updated (hand-staged
