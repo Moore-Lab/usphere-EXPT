@@ -16,6 +16,29 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-18 — Alternative filament ramp: power-supply voltage ramp (SSR held on)
+**Focus:** A second filament ramp path to test against pulsing — hold the SSR
+closed and ramp the NGE filament-power voltage.
+**Changes:** usphere-Q `b4969ad` (pushed), parent pointer hand-staged (usphere-Q
+only). `FilamentRamp.mode` = "pulse" | "power" + power params (start_v,
+increment_v, max_v, easyramp_ms). `PowerRampRunner` ramps the voltage
+start→max, waits timeout_cycles reads, evaluates the same stop condition
+(target or |Δq|), stops at goal/max (bounded, like the pulse ramp).
+`FilamentAdapter.hold_ssr_on()` holds the trigger high (~99%-duty 1 kHz pulse
+via the background pulser → SSR closed); `set_power_voltage`/`set_power_easyramp`
+drive the NGE off-GUI-thread (new `NGEControlGroup.set_voltage_live`/
+`set_easyramp`; `nge_supply` exposes EasyRamp; `DriveSetbackAdapter` passes them
+through and parks on hold). `ChargeController._start_pulse_ramp` dispatches by
+mode. `FilamentRampConfig` gets a mode selector + power fields; the manual
+Filament-tab runner rejects power mode (no NGE handle). RampCycle carries a unit
+(ms/V). Verified (test_power_ramp; full suite 15/15).
+**State / handoff:** BENCH: the SSR is held closed with a 1 kHz / 99%-duty pulse
+(near-DC high) — if that doesn't hold your SSR, raise the duty or drop the freq
+(in `_FilamentPulser._hold`). Start with a low start_v + small increment;
+timeout_cycles=1 reads every step. EasyRamp 0 = the voltage jumps each step, >0 =
+soft-start per step. Compare against the pulse mode to decide which disturbs the
+sphere less.
+
 ## 2026-07-18 — Charge control safeties: overload stop + sign-independent |dq|
 **Focus:** The loop chased a bogus/overloaded reading (charge "read" +835,
 kept heating). Add safeties.
