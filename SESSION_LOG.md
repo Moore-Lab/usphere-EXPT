@@ -16,6 +16,30 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-18 — Charge-Q: SR530 auto-range, start-charge-monitor, bounded ramp
+**Focus:** Auto-range the lock-in, a one-click "start charge monitor", bounded
+filament ramp, and more defaults.
+**Changes:** usphere-Q `2a6a263` + `9beb7c7` (pushed), parent pointer updated
+(hand-staged usphere-Q only). (1) Filament ramp now STOPS at max width
+(PulseRampRunner "maxed" reason) — start==max fires one pulse then off; the
+control loop reports "reached max width — target not reached". (2) Analysis
+defaults: axis Y, source Lock-in (SR530 direct). Control-tab flash control
+voltage 4 V; filament NGE 5 V / 3 A. (3) `AutoRanger` (charge_analysis.py): steps
+SR530 sensitivity one index at a time (more sensitive on headroom, less on
+overload) with a settle window, on the poll thread (off the GUI thread).
+Continuous toggle + one-shot button in the Analysis tab; a one-shot also runs
+whenever the drive amplitude changes (setback park/restore during flash / ramp
+filament / go to target) and from the macro. Grayed "Range" readout updates from
+the stream. (4) "▶ Start charge monitor" (Analysis tab) = connect-all + drive Y
+100 Hz/8 Vpp + start lock-in + auto-range. Verified (test_autorange, full suite
+15/15).
+**State / handoff:** The live grayed range readout + auto-range controls live in
+the Analysis tab (not the SR530 Parameters tab, which still reads the range into
+its combo on connect) — movable if you want it in the Lock-In tab. Auto-range
+uses r_frac hysteresis (0.15/0.9) + a 0.5 s settle; tune if it hunts. The
+start-monitor macro uses a fixed 5 s delay for the async connects before driving
+Y / starting the lock-in.
+
 ## 2026-07-18 — Charge-Q setup: connect-all, defaults, calibration load, flash off-thread
 **Focus:** Startup/UX batch for the charge GUI + move the flash lamp off the
 GUI thread like the filament.
