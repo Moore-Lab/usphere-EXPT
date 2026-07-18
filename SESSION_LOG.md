@@ -16,6 +16,32 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-17 — Filament pulse-wait-read ramp (shared Control + sequencer core)
+**Focus:** The filament runs away and makes the lock-in noisy while on, so the
+old continuous freq/width ramp was hard to control. Replace it with a
+pulse→wait→read→increment loop that reads only when the filament is off.
+**Changes:** usphere-Q `b6a18d4` (pushed), parent pointer updated (hand-staged
+usphere-Q only — siblings usphere-CTRL/.vscode hold other sessions' uncommitted
+work, so I did NOT run the recursive sync). `PulseRampRunner` + slimmed
+`FilamentRamp{enabled,start_width_ms,increment_ms,max_width_ms,timeout_cycles}`
+in charge_control.py: fire ONE pulse of width W, wait N clean read cycles
+(filament off), read charge, evaluate the stop condition, else increment width
+and refire. Frequency ramp dropped. Single-pulse firing via a 1 mHz carrier
+(`fire_single_pulse`/`FilamentAdapter.fire_pulse`/`ChargeSequencerActuators
+.fire_filament_pulse`): output-on fires one hardware-timed pulse, off long
+before the ~1000 s-away next one — no burst mode needed. Shared core loop:
+ChargeController HEAT (`_run_pulse_ramp`, suspends rules/at-target while active)
+and the sequencer recharge (`_run_recharge`; SeqStep gains fil_start_width_ms/
+increment/max/timeout_cycles, legacy freq/width kept for old configs). Grayed
+`CycleLog` diagnostics (width + Δq/read) for filament + flash in the Control
+tab. Removed old mode-based `FilamentRamp`/`_execute_heat_ramp`. Headless-
+verified (pulse-ramp state machine, ChargeController, sequencer engine + tab).
+**State / handoff:** The 1 mHz single-pulse firing assumes the AFG restarts the
+pulse waveform at phase 0 on output-on — **verify on the bench**; if it
+free-runs the phase, the pulse won't fire and we need an explicit phase reset.
+Next: Control-tab UX overhaul (basic flash/filament runners + target/tolerance
++ T-min safety timeout, strip rules) — in progress this session.
+
 ## 2026-07-16 — Lock-in calibration accepts a signed V/e (negative is valid)
 **Focus:** Fix a spurious "polarity/phase opposite sign" error when calibrating.
 **Changes:** usphere-Q `67a621d` (pushed), parent synced. The lock-in X sign vs
