@@ -16,6 +16,65 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-19 — Power-sweep tab (reworked Experiment) + per-tool drive setback
+**Focus:** Rework the "Experiment / Photon Order" tab into a "Power sweep" tab
+with proper control loops: reset the charge before each flash step with the
+filament ramp, embed a DAQ acquire panel (one run per step), per-tool drive
+setback on both Control and Power-sweep tabs, and a stop-on-overload safety.
+**Changes:** usphere-Q (commit pending), parent pointer via sync_submodules.
+- **Per-tool drive setback (both tabs):** new reusable `DriveSetbackConfig`
+  widget (checkbox + charging amplitude + Apply-to: Flash/Filament/Both) in
+  charge_gui_tabs.py; `ControlTab` now uses it (replaces the inline setback
+  group; config key `_gui_setback`). `DriveSetbackAdapter.park(tool)` is
+  per-tool (`apply_flash`/`apply_filament`, legacy dicts still park both);
+  `ChargeController._park_setback(tool)` parks flash with "flash", filament
+  with "filament". Added `set_params_source`/`clear_params_source` so the sweep
+  can temporarily drive the SHARED adapter with its own setback settings.
+- **Power-sweep tab** (`PowerSweepTab`, alias `ExperimentTab`): flash control
+  voltage × frequency grid (comma list or np.arange "→ List"); N events per
+  step; reset-target + tolerance + the reused `FilamentRampConfig` (pulse or
+  power) to recharge before each step; per-tool setback + nominal drive
+  voltage (applied on the GUI thread before start via `apply_drive_requested`
+  → the sequencer's set-electrode handler); stop-on-overload; embedded DAQ
+  acquire panel (output dir/root/sample rate/n_bits/host/port + Ping); live
+  heatmap + log. Tab renamed "Power sweep".
+- **Engine** (`photon_order_experiment.py` rewritten): per grid point — reset
+  charge via `PulseRampRunner`/`PowerRampRunner` to `q <= target+tol`, park the
+  flash drive, start a fresh continuous DAQ run (`n_files=0`, basename
+  `{root}_{stamp}_V{v}_f{f}`), flash + count |Δq|≥threshold events until N,
+  stop DAQ, restore drive. New `DAQRecorder` (ZMQ start/stop). Debounced
+  lock-in overload stop; optional per-step |charge| limit; idempotent cleanup
+  (stop DAQ+close client, disarm both tools, restore + clear params source) in
+  the worker `finally`. Fixes the old broken bang-bang reset (both branches
+  flashed) + unresolved polarity TODO.
+**Review + fixes:** a 4-dimension adversarial-review workflow (16 agents)
+confirmed 8 findings; all fixed and regression-tested: (1) abort()/start()
+thread lifecycle — start() now refuses a second worker while one is alive
+(is_running honors the live thread), abort waits 15 s, flash sleep is
+interruptible (`_sleep_cycles`); (2) DAQ-start-failure now emits a terminal
+state (was a silent stop); (3) sub-0.1 Hz flash-rate over-counted flashes — the
+poll period is no longer clamped so one poll == one flash; (4) non-normal
+terminations (overload/DAQ-fail/error) now re-enable Start (engine always emits
+a terminal state; the tab resets buttons on any terminal); (5) "Filament only"
+setback leaked into the flash phase — the drive is restored between reset and
+flash so the per-tool 'flash' gate is authoritative. (Ruled not-a-bug:
+DAQRecorder socket leak — cleanup closes it; cross-thread widget reads from the
+worker — the sweep drives the shared setback adapter off-thread, judged benign.)
+**Validated:** test_power_sweep (13 subtests: DAQRecorder ZMQ, reset pulse+
+power, overload debounce+terminal, per-tool setback incl. filament-only-at-
+nominal, cleanup, DAQ-fail terminal, unclamped period, start guard, tab buttons,
+full 2-point integration), test_setback_pertool, full headless suite 8/8 green;
+ChargeWidget builds headless with the tab wired.
+**State / handoff:** BENCH: the reset lowers charge to the set point with the
+filament ONLY (it can't raise it) — pick a reset target at/below the post-flash
+charge. DAQ recording is per-step continuous (n_files=0); confirm the DAQ
+server honours n_files=0 + basename. The nominal drive is applied to the
+monitored axis before the sweep; 0 = leave it. Overload debounce = 2 reads
+(raise if wide flashes trip it). The sweep drives the shared DriveSetbackAdapter
+from its worker thread (widget reads off the GUI thread) — reviewed as benign,
+but watch for oddities if the drive amplitude misbehaves during a sweep.
+Cross-check the flash-control-voltage → photon intensity mapping on the bench.
+
 ## 2026-07-18 — Alternative filament ramp: power-supply voltage ramp (SSR held on)
 **Focus:** A second filament ramp path to test against pulsing — hold the SSR
 closed and ramp the NGE filament-power voltage.
