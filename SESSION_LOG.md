@@ -16,6 +16,55 @@ follow-ups for the next session.
 
 ---
 
+## 2026-07-19 — Drive-change settle + power-default ramp + Set-parameters button
+**Focus:** Reducing the electrode drive (8→0.1 Vpp) spikes the lock-in; the
+automated loop chased the transient. Make every consumer wait it out, default
+the filament ramp to power mode, and add a hardware-inert "Set parameters".
+**Changes:** usphere-Q (commit pending), parent pointer + this log.
+- **5 s settle on drive change (both directions):** `DriveSetbackAdapter`
+  park()/restore() now return True only if the amplitude actually changed and
+  stamp `_changed_at`; `settle_remaining()`/`wait_settled()` expose a 5 s
+  (`SETTLE_S`) window. The `ChargeController` poll loop gates at the top — while
+  `_settle_remaining() > 0` it takes NO action (and skips the overload check so
+  the transient can't trip a false overload stop); when a `_park_setback`
+  actually moves the drive, `_do_flash`/`_start_pulse_ramp` emit "settling
+  before …" and return, actuating only on a later settled poll (park is
+  idempotent → no re-arm). The independent watchdog still enforces the timeout.
+  The Power-sweep engine (worker thread) blocks on `_wait_drive_settled()` after
+  every drive change (restore, park-for-flash, reset hold/pulse).
+- **Power ramp is the default:** `FilamentRampConfig(default_mode="power")` +
+  `set_mode()`; the manual Filament-tab runner passes "pulse" (no NGE handle).
+- **timeout_cycles floor:** kept at 1; tooltip now explains why 0 isn't offered
+  (a same-cycle read predates the change; both runners already clamp to 1).
+- **"Set parameters" button (Control tab):** loads target/tol/flash/filament-
+  ramp/timeout/overload into the loop and `set_policy("auto")` WITHOUT actuating
+  anything (verified: zero enable/arm/fire/hold/set_voltage/set_electrode
+  calls), shows a one-line summary of what's loaded. "Go to target" reuses the
+  same `_apply_all_params()`.
+**Review + fixes:** a 3-dimension adversarial workflow confirmed 4 findings, all
+fixed: (1) HIGH — the sweep's overload watcher had no settle gate, so the very
+drive transient `_wait_drive_settled()` blocks for tripped the 2-read overload
+stop and aborted the sweep before any data; it now gates on `settle_remaining()`
+(and keeps the last good charge rather than storing the transient). (2) HIGH —
+in the sweep's power reset the SSR closed while the supply still sat at the
+PREVIOUS grid point's ceiling, then the new settle held it there ~5 s of
+uncontrolled heating; the reset now parks + settles FIRST and programs
+`start_v` BEFORE `hold_ssr_on()`. (3) MEDIUM — no restore on tool transition:
+the auto-overshoot "correcting with flash" path and flash→filament switching
+inherited the other tool's park, so a per-tool setback ("Filament only" /
+"Flash only") was silently violated; both now `_restore_setback()` first.
+(4) LOW — a persistently failing flash `enable()` oscillated park/restore every
+~5 s until the watchdog; it now stops the run.
+**Validated:** test_settle_and_params (11 subtests: adapter settle, controller
+flash+filament defer with overload ignored mid-settle, power default, 0≡1
+timeout_cycles, Set-parameters hardware-inertness + lifecycle, sweep settle
+gate, sweep power-reset ordering, tool-transition restore, flash-failure stop),
+full suite 9/9; ChargeWidget builds headless.
+**State / handoff:** BENCH: after any drive-setback change the loop pauses 5 s;
+raise `SETTLE_S` in `DriveSetbackAdapter` if the ring is longer. A previously
+SAVED Control-tab config may restore the ramp to pulse mode (mode is persisted)
+— switch it to power once and it sticks. Confirm the flash-V→intensity mapping.
+
 ## 2026-07-19 — Power-sweep tab (reworked Experiment) + per-tool drive setback
 **Focus:** Rework the "Experiment / Photon Order" tab into a "Power sweep" tab
 with proper control loops: reset the charge before each flash step with the
